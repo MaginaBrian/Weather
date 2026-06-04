@@ -9,6 +9,8 @@ backend/__pycache__/
 # Node
 frontend/node_modules/
 frontend/dist/
+frontend/node_modules/.tmp/
+frontend/node_modules/.vite/
 
 # Env
 .env

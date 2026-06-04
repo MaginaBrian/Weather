@@ -4,7 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.geocode import search_locations
@@ -49,7 +49,7 @@ async def unhandled_exception(_request: Request, exc: Exception):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "frontend": frontend_dist.is_dir()}
 
 
 @app.get("/api/weather")
@@ -111,19 +111,10 @@ async def geocode(q: str = Query(..., min_length=2)):
         raise HTTPException(status_code=502, detail="Geocoding failed") from e
 
 
+# Serve Vite build (must be registered after /api/* routes).
 if frontend_dist.is_dir():
-    assets_dir = frontend_dist / "assets"
-    if assets_dir.is_dir():
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        if full_path.startswith("api"):
-            raise HTTPException(status_code=404)
-        file_path = frontend_dist / full_path
-        if file_path.is_file():
-            return FileResponse(file_path)
-        index = frontend_dist / "index.html"
-        if index.is_file():
-            return FileResponse(index)
-        raise HTTPException(status_code=404)
+    app.mount(
+        "/",
+        StaticFiles(directory=str(frontend_dist), html=True),
+        name="frontend",
+    )
