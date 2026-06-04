@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Weather Pulse
 
-## Getting Started
+Weather dashboard for the **Weather-AI Technical Challenge**, built with **Python (FastAPI)** and **Vite + React**.
 
-First, run the development server:
+Integrates the [Weather-AI REST API](https://weather-ai.co/docs): current weather, forecasts, Gemini AI summaries, IP geo-detection, and usage quotas.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Stack
+
+| Layer | Tech |
+|-------|------|
+| API proxy | Python 3.11+, FastAPI, httpx |
+| Frontend | Vite (latest), React 19, TypeScript, Tailwind CSS v4 |
+
+## Features
+
+- `GET /v1/weather` — current conditions + multi-day forecast
+- `GET /v1/weather-geo?ip=auto` — IP-based location + weather
+- `GET /v1/usage` — plan usage and rate limits
+- City search (Nominatim → lat/lon → Weather-AI)
+- Toggle AI summaries (`ai=false` saves quota)
+- Saved favorite locations (localStorage)
+
+## Project structure
+
+```
+backend/
+  app/
+    main.py          # FastAPI routes + static SPA in production
+    weather_ai.py    # Weather-AI client
+    geocode.py       # Nominatim geocoding
+  requirements.txt
+frontend/
+  src/
+    components/WeatherDashboard.tsx
+    lib/weather.ts
+  vite.config.ts     # proxies /api → :8000 in dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prerequisites
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Python 3.11+
+- Node.js 20+
+- Weather-AI API key (`wai_…`) from [weather-ai.co](https://weather-ai.co)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Local development
 
-## Learn More
+### 1. Backend
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env: WEATHER_AI_API_KEY=wai_your_key
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Frontend (separate terminal)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api/*` to the Python server.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### One-command dev (optional)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+chmod +x scripts/dev.sh
+./scripts/dev.sh
+```
+
+## Production build
+
+Serve the React build from FastAPI (single deploy):
+
+```bash
+cd frontend && npm run build
+cd ../backend
+ENV=production uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Open [http://localhost:8000](http://localhost:8000).
+
+## Deploy on Render (recommended)
+
+One **Web Service** serves the React app and Python API together.
+
+### Option A — Blueprint (fastest)
+
+1. Push this repo to **public GitHub**.
+2. Go to [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**.
+3. Connect the repo — Render reads `render.yaml`.
+4. When prompted, set **`WEATHER_AI_API_KEY`** (`wai_…` from [weather-ai.co](https://weather-ai.co)).
+5. Click **Apply** and wait for the deploy (~3–5 min).
+6. Open your service URL (e.g. `https://weather-pulse.onrender.com`).
+
+### Option B — Manual Web Service
+
+| Setting | Value |
+|---------|--------|
+| **Runtime** | Python 3 |
+| **Build Command** | `chmod +x scripts/render-build.sh && ./scripts/render-build.sh` |
+| **Start Command** | `cd backend && ENV=production uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| **Health Check Path** | `/api/health` |
+
+**Environment variables** (Render → Environment):
+
+| Key | Value |
+|-----|--------|
+| `WEATHER_AI_API_KEY` | your `wai_…` key |
+| `ENV` | `production` |
+| `PYTHON_VERSION` | `3.12.0` (optional) |
+
+Never commit the API key — set it only in Render’s dashboard.
+
+### Verify deployment
+
+```bash
+curl https://YOUR-SERVICE.onrender.com/api/health
+curl https://YOUR-SERVICE.onrender.com/api/usage
+```
+
+Use the same URL in your submission email as the **live deployment link**.
+
+## Environment variables
+
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `WEATHER_AI_API_KEY` | `backend/.env` (local) or Render dashboard (prod) | Your `wai_…` API key |
+| `ENV` | Render / production | Set to `production` to serve `frontend/dist` |
+
+## Submission checklist
+
+- [ ] Public GitHub repo with this README
+- [ ] `WEATHER_AI_API_KEY` configured on host (not committed)
+- [ ] Live deployment URL
+- [ ] Email Claire with repo + live links
+
+## License
+
+MIT — technical assessment submission.
+# Weather
