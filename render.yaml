@@ -1,0 +1,16 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: weather-pulse
+    runtime: python
+    plan: free
+    buildCommand: chmod +x scripts/render-build.sh && ./scripts/render-build.sh
+    startCommand: cd backend && ENV=production uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: ENV
+        value: production
+      - key: WEATHER_AI_API_KEY
+        sync: false

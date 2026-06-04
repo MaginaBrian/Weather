@@ -1,39 +1,48 @@
 # Weather Pulse
 
-Weather dashboard for the **Weather-AI Technical Challenge**, built with **Python (FastAPI)** and **Vite + React**.
+Weather dashboard for the [Weather-AI Technical Challenge](https://weather-ai.co/docs). Built with **Python (FastAPI)** and **Vite + React**.
 
-Integrates the [Weather-AI REST API](https://weather-ai.co/docs): current weather, forecasts, Gemini AI summaries, IP geo-detection, and usage quotas.
+Search cities, view current conditions and forecasts, and read Gemini-powered AI summaries. The API key stays on the server—never exposed to the browser.
 
 ## Stack
 
-| Layer | Tech |
-|-------|------|
-| API proxy | Python 3.11+, FastAPI, httpx |
-| Frontend | Vite (latest), React 19, TypeScript, Tailwind CSS v4 |
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3.12, FastAPI, httpx |
+| Frontend | Vite 8, React 19, TypeScript, Tailwind CSS v4 |
+| Deploy | [Render](https://render.com) (Web Service) |
 
 ## Features
 
-- `GET /v1/weather` — current conditions + multi-day forecast
-- `GET /v1/weather-geo?ip=auto` — IP-based location + weather
-- `GET /v1/usage` — plan usage and rate limits
-- City search (Nominatim → lat/lon → Weather-AI)
-- Toggle AI summaries (`ai=false` saves quota)
-- Saved favorite locations (localStorage)
+- Current weather and multi-day forecast via Weather-AI `/v1/weather`
+- IP-based location detection via `/v1/weather-geo`
+- API usage and quota display via `/v1/usage`
+- City search (OpenStreetMap Nominatim → coordinates → Weather-AI)
+- Optional AI summaries (`?ai=false` to save quota on Free plans)
+- Saved favorite locations (browser localStorage)
 
 ## Project structure
 
 ```
-backend/
-  app/
-    main.py          # FastAPI routes + static SPA in production
-    weather_ai.py    # Weather-AI client
-    geocode.py       # Nominatim geocoding
-  requirements.txt
-frontend/
-  src/
-    components/WeatherDashboard.tsx
-    lib/weather.ts
-  vite.config.ts     # proxies /api → :8000 in dev
+Weather/
+├── backend/
+│   ├── app/
+│   │   ├── main.py         # API routes + serves frontend in production
+│   │   ├── weather_ai.py   # Weather-AI HTTP client
+│   │   └── geocode.py      # City search
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── components/WeatherDashboard.tsx
+│   │   └── lib/weather.ts
+│   └── vite.config.ts      # dev proxy: /api → localhost:8000
+├── scripts/
+│   ├── render-build.sh     # Render production build
+│   └── dev.sh              # run backend + frontend locally
+├── render.yaml             # Render Blueprint
+├── Procfile                # start command (Render/Heroku-style)
+└── README.md
 ```
 
 ## Prerequisites
@@ -44,19 +53,20 @@ frontend/
 
 ## Local development
 
-### 1. Backend
+### Backend
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env
-# Edit .env: WEATHER_AI_API_KEY=wai_your_key
+cp .env.example .env               # add WEATHER_AI_API_KEY=wai_...
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### 2. Frontend (separate terminal)
+### Frontend
+
+In a second terminal:
 
 ```bash
 cd frontend
@@ -64,83 +74,84 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api/*` to the Python server.
+Open **http://localhost:5173**. Vite proxies `/api/*` to the backend on port 8000.
 
-### One-command dev (optional)
+### Both servers (optional)
 
 ```bash
 chmod +x scripts/dev.sh
 ./scripts/dev.sh
 ```
 
-## Production build
+## Local production test
 
-Serve the React build from FastAPI (single deploy):
+Build the UI and serve everything from FastAPI:
 
 ```bash
-cd frontend && npm run build
-cd ../backend
+./scripts/render-build.sh
+cd backend && source .venv/bin/activate
 ENV=production uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000).
+Open **http://localhost:8000**.
 
-## Deploy on Render (recommended)
+## Deploy on Render
 
-One **Web Service** serves the React app and Python API together.
+One Web Service hosts the React app and Python API.
 
-### Option A — Blueprint (fastest)
+### Blueprint (recommended)
 
-1. Push this repo to **public GitHub**.
-2. Go to [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**.
-3. Connect the repo — Render reads `render.yaml`.
-4. When prompted, set **`WEATHER_AI_API_KEY`** (`wai_…` from [weather-ai.co](https://weather-ai.co)).
-5. Click **Apply** and wait for the deploy (~3–5 min).
-6. Open your service URL (e.g. `https://weather-pulse.onrender.com`).
+1. Push this repo to GitHub.
+2. [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint** → connect the repo.
+3. Set **`WEATHER_AI_API_KEY`** when prompted.
+4. **Apply** and wait for the build (~3–5 min).
+5. Use your service URL as the live demo link.
 
-### Option B — Manual Web Service
+### Manual Web Service
 
 | Setting | Value |
 |---------|--------|
-| **Runtime** | Python 3 |
-| **Build Command** | `chmod +x scripts/render-build.sh && ./scripts/render-build.sh` |
-| **Start Command** | `cd backend && ENV=production uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-| **Health Check Path** | `/api/health` |
+| Runtime | Python 3 |
+| Build Command | `chmod +x scripts/render-build.sh && ./scripts/render-build.sh` |
+| Start Command | `cd backend && ENV=production uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health Check Path | `/api/health` |
 
-**Environment variables** (Render → Environment):
+**Environment variables:**
 
 | Key | Value |
 |-----|--------|
 | `WEATHER_AI_API_KEY` | your `wai_…` key |
 | `ENV` | `production` |
-| `PYTHON_VERSION` | `3.12.0` (optional) |
 
-Never commit the API key — set it only in Render’s dashboard.
+Do not commit API keys. Set them only in `backend/.env` (local) or the Render dashboard (production).
 
-### Verify deployment
+### Verify
 
 ```bash
 curl https://YOUR-SERVICE.onrender.com/api/health
 curl https://YOUR-SERVICE.onrender.com/api/usage
 ```
 
-Use the same URL in your submission email as the **live deployment link**.
+Free-tier services may sleep after inactivity; the first request can take ~30 seconds.
 
-## Environment variables
+## API routes (this app)
 
-| Variable | Where | Description |
-|----------|-------|-------------|
-| `WEATHER_AI_API_KEY` | `backend/.env` (local) or Render dashboard (prod) | Your `wai_…` API key |
-| `ENV` | Render / production | Set to `production` to serve `frontend/dist` |
+| Route | Upstream |
+|-------|----------|
+| `GET /api/weather` | Weather-AI `/v1/weather` |
+| `GET /api/weather-geo` | Weather-AI `/v1/weather-geo` |
+| `GET /api/usage` | Weather-AI `/v1/usage` |
+| `GET /api/geocode` | OpenStreetMap Nominatim |
+| `GET /api/health` | Health check |
 
 ## Submission checklist
 
-- [ ] Public GitHub repo with this README
-- [ ] `WEATHER_AI_API_KEY` configured on host (not committed)
+- [ ] Public GitHub repository
+- [ ] README with setup instructions (this file)
+- [ ] `WEATHER_AI_API_KEY` set on Render (not in git)
 - [ ] Live deployment URL
-- [ ] Email Claire with repo + live links
+- [ ] Email Claire with repo link + live link
 
 ## License
 
 MIT — technical assessment submission.
-# Weather
