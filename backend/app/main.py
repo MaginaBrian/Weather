@@ -2,13 +2,13 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.geocode import search_locations
-from app.weather_ai import WeatherAIError, fetch_weather_ai
+from app.weather_ai import WeatherAIError, fetch_weather_ai, fetch_weather_with_fallback
 
 _root = Path(__file__).resolve().parents[2]
 load_dotenv(_root / "backend" / ".env")
@@ -37,6 +37,16 @@ def api_error(exc: WeatherAIError) -> HTTPException:
     return HTTPException(status_code=exc.status_code, detail=str(exc))
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception(_request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        raise exc
+    return JSONResponse(
+        status_code=502,
+        content={"detail": f"Unexpected server error: {exc}"},
+    )
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
@@ -52,11 +62,10 @@ async def weather(
     lang: str = Query("en"),
 ):
     try:
-        data, rate_limit, _ = await fetch_weather_ai(
-            "/v1/weather",
+        data, rate_limit, ai_fallback = await fetch_weather_with_fallback(
             {"lat": lat, "lon": lon, "days": days, "ai": ai, "units": units, "lang": lang},
         )
-        return {"data": data, "rateLimit": rate_limit}
+        return {"data": data, "rateLimit": rate_limit, "aiFallback": ai_fallback}
     except WeatherAIError as e:
         raise api_error(e) from e
 

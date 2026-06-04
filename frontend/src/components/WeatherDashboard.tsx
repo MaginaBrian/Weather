@@ -125,6 +125,11 @@ export default function WeatherDashboard() {
         if (!res.ok) throw new Error(await parseApiError(res));
         setWeather(json.data);
         if (json.rateLimit) setRateLimit(json.rateLimit);
+        if (json.aiFallback && useAI) {
+          setError(
+            "AI summary unavailable (Weather-AI timeout). Showing forecast without AI."
+          );
+        }
         loadUsage();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong");
