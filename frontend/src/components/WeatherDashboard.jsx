@@ -121,8 +121,12 @@ export default function WeatherDashboard() {
         );
         setWeather(json.data);
         if (json.rateLimit) setRateLimit(json.rateLimit);
-        if (json.aiFallback && useAI) {
+        if (json.live === false || json.demo) {
+          setError(json.demoNote || "Weather-AI unavailable — showing demo data.");
+        } else if (json.aiFallback && useAI) {
           setError("AI summary unavailable — showing forecast without AI.");
+        } else {
+          setError(null);
         }
         refreshUsage();
       } catch (e) {
@@ -333,7 +337,13 @@ export default function WeatherDashboard() {
       </section>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-rose-100">
+        <div
+          className={`mb-6 rounded-xl px-4 py-3 ${
+            error.includes("demo") || error.includes("Demo")
+              ? "border border-amber-400/30 bg-amber-500/10 text-amber-100"
+              : "border border-rose-400/30 bg-rose-500/10 text-rose-100"
+          }`}
+        >
           {error}
         </div>
       )}

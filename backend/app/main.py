@@ -65,7 +65,14 @@ async def weather(
         data, rate_limit, ai_fallback = await fetch_weather_with_fallback(
             {"lat": lat, "lon": lon, "days": days, "ai": ai, "units": units, "lang": lang},
         )
-        return {"data": data, "rateLimit": rate_limit, "aiFallback": ai_fallback}
+        return {
+            "data": data,
+            "rateLimit": rate_limit,
+            "aiFallback": ai_fallback,
+            "live": not data.get("_demo"),
+            "demo": bool(data.get("_demo")),
+            "demoNote": data.get("_demo_note"),
+        }
     except WeatherAIError as e:
         raise api_error(e) from e
 
@@ -88,7 +95,14 @@ async def weather_geo(
 
     try:
         data, rate_limit, geo_headers = await fetch_weather_ai("/v1/weather-geo", params)
-        return {"data": data, "rateLimit": rate_limit, "geoHeaders": geo_headers}
+        return {
+            "data": data,
+            "rateLimit": rate_limit,
+            "geoHeaders": geo_headers,
+            "live": not data.get("_demo"),
+            "demo": bool(data.get("_demo")),
+            "demoNote": data.get("_demo_note"),
+        }
     except WeatherAIError as e:
         raise api_error(e) from e
 

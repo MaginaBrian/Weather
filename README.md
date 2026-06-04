@@ -24,6 +24,7 @@ The Weather-AI API key is stored **only on the server**. The browser never recei
 - Optional AI summaries (off by default; use `?ai=false` to save Free-plan quota)
 - Saved favorite locations (localStorage)
 - Automatic fallback to non-AI weather if AI requests time out
+- **Local dev:** always tries live Weather-AI first (retries + alternate endpoints); sample data only if the API is down (`WEATHER_DEMO_FALLBACK=true`)
 
 ## Architecture
 
